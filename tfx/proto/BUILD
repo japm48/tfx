@@ -63,8 +63,3 @@ tfx_py_proto_library(
     name = "tuner_proto_py_pb2",
     srcs = ["tuner.proto"],
 )
-
-tfx_py_proto_library(
-    name = "example_diff_proto_py_pb2",
-    srcs = ["example_diff.proto"],
-)

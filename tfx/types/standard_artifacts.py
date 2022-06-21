@@ -127,10 +127,6 @@ class ExampleStatistics(_TfxArtifact):
   }
 
 
-class ExamplesDiff(_TfxArtifact):
-  TYPE_NAME = 'ExamplesDiff'
-
-
 # TODO(b/158334890): deprecate ExternalArtifact.
 class ExternalArtifact(_TfxArtifact):
   TYPE_NAME = 'ExternalArtifact'
