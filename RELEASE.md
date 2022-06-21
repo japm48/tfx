@@ -71,6 +71,7 @@
 *   Enabled custom labels to be submitted to CAIP training jobs.
 *   Enabled custom resource-setting (vCPU and RAM) for containers orchestrating 
     on Vertex AI.
+*   Enabled dynamic parameter setting during pipeline authoring on Vertex AI.
 
 ## Breaking Changes
 

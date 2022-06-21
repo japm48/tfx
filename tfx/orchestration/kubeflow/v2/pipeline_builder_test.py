@@ -60,6 +60,8 @@ class PipelineBuilderTest(tf.test.TestCase):
         default_image='gcr.io/my-tfx:latest')
     actual_pipeline_spec = my_builder.build()
 
+    print(actual_pipeline_spec)
+
     self.assertProtoEquals(
         test_utils.get_proto_from_test_data(
             'expected_pipeline_with_one_container_spec_component.pbtxt',
@@ -157,6 +159,9 @@ class PipelineBuilderTest(tf.test.TestCase):
         test_utils.get_proto_from_test_data(
             'expected_two_step_pipeline_with_exit_handler.pbtxt',
             pipeline_pb2.PipelineSpec()), pipeline_spec)
+
+  def PipelineBuilder(self):
+    pass
 
 
 if __name__ == '__main__':
