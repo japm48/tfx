@@ -24,6 +24,7 @@ from tfx.dsl.compiler.testdata import additional_properties_test_pipeline_async
 from tfx.dsl.compiler.testdata import channel_union_pipeline
 from tfx.dsl.compiler.testdata import composable_pipeline
 from tfx.dsl.compiler.testdata import conditional_pipeline
+from tfx.dsl.compiler.testdata import consumer_pipeline
 from tfx.dsl.compiler.testdata import dynamic_exec_properties_pipeline
 from tfx.dsl.compiler.testdata import foreach_pipeline
 from tfx.dsl.compiler.testdata import iris_pipeline_async
@@ -103,6 +104,7 @@ class CompilerTest(tf.test.TestCase, parameterized.TestCase):
        "composable_pipeline_ir.pbtxt"),
       ("_resolver_function_pipeline", resolver_function_pipeline,
        "resolver_function_pipeline_ir.pbtxt"),
+      ("_consumber_pipeline", consumer_pipeline, "consumer_pipeline_ir.pbtxt"),
   )
   def testCompile(self, pipeline_module, expected_result_path):
     """Tests compiling the whole pipeline."""

@@ -284,6 +284,7 @@ class Pipeline(base_node.BaseNode):
       raise ValueError(
           f'pipeline {pipeline_name} exceeds maximum allowed length: {_MAX_PIPELINE_NAME_LENGTH}.'
       )
+    self.pipeline_name = pipeline_name
 
     # Initialize pipeline as a node.
     super().__init__()

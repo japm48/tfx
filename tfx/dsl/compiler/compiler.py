@@ -82,7 +82,7 @@ class _CompilerContext:
     for predicate in conditional.get_predicates(here,
                                                 self.dsl_context_registry):
       for chnl in predicate.dependent_channels():
-        if isinstance(chnl, tfx_channel.OutputChannel):
+        if isinstance(chnl, types.OutputChannel):
           self._add_implicit_dependency(chnl.producer_component_id, here.id)
 
   def topologically_sorted(self, tfx_nodes: Iterable[base_node.BaseNode]):
@@ -152,8 +152,12 @@ class Compiler:
     # Step 3.3: Fill node inputs
     # Note here we use parent_pipeline_context, because a PipelineBegin node
     # uses output channels from its parent pipeline.
-    _set_node_inputs(node, p, compile_context.parent_pipeline_context, p.inputs,
-                     implicit_input_channels)
+    if compile_context.parent_pipeline_context:
+      _set_node_inputs(node, p, compile_context.parent_pipeline_context,
+                       p.inputs, implicit_input_channels)
+    else:
+      _set_node_inputs(node, p, compile_context, p.inputs,
+                       implicit_input_channels)
 
     # Step 4: Node outputs
     # PipeineBegin node's outputs are the same as its inputs,
@@ -168,16 +172,17 @@ class Compiler:
     # Step 5: Upstream/Downstream nodes
     # PipelineBegin node's upstreams nodes are the inner pipeline's upstream
     # nodes, i.e., the producer nodes of inner pipeline's inputs.
-    upstreams = set(
-        _find_runtime_upstream_node_ids(compile_context.parent_pipeline_context,
-                                        p))
-    if _begin_node_is_upstream(
-        p, compile_context.parent_pipeline_context.pipeline):
-      upstreams.add(
-          compiler_utils.pipeline_begin_node_id(
-              compile_context.parent_pipeline_context.pipeline))
-    # Sort node ids so that compiler generates consistent results.
-    node.upstream_nodes.extend(sorted(upstreams))
+    if compile_context.parent_pipeline_context:
+      upstreams = set(
+          _find_runtime_upstream_node_ids(
+              compile_context.parent_pipeline_context, p))
+      if _begin_node_is_upstream(
+          p, compile_context.parent_pipeline_context.pipeline):
+        upstreams.add(
+            compiler_utils.pipeline_begin_node_id(
+                compile_context.parent_pipeline_context.pipeline))
+      # Sort node ids so that compiler generates consistent results.
+      node.upstream_nodes.extend(sorted(upstreams))
 
     # PipelineBegin node's downstream nodes are the nodes in the inner pipeline
     # that consumes pipeline's input channels.
@@ -441,7 +446,7 @@ class Compiler:
 
     # To make compiled IR strcuture backward compatible, currently only inner
     # composable pipelines have pipeline begin and end nodes.
-    if parent_pipelines:
+    if parent_pipelines or tfx_pipeline._inputs:  # pylint: disable=protected-access
       pipeline_begin_node_pb = self._compile_pipeline_begin_node(
           tfx_pipeline, context)
       pipeline_or_node = pipeline_pb.PipelineOrNode()
@@ -764,9 +769,12 @@ def _set_conditionals(
     compile_context: _CompilerContext, tfx_node_inputs: Dict[str, types.Channel]
 ) -> Iterator[Tuple[str, types.Channel]]:
   """Compiles the conditionals for a pipeline node."""
+  predicates = None
   if isinstance(tfx_node, pipeline.Pipeline):
-    predicates = conditional.get_predicates(
-        tfx_node, compile_context.parent_pipeline_context.dsl_context_registry)
+    if compile_context.parent_pipeline_context:
+      predicates = conditional.get_predicates(
+          tfx_node,
+          compile_context.parent_pipeline_context.dsl_context_registry)
   else:
     predicates = conditional.get_predicates(
         tfx_node, compile_context.dsl_context_registry)
@@ -883,6 +891,22 @@ def _set_node_inputs(node: pipeline_pb2.PipelineNode,
       if isinstance(input_channel, types.OutputChannel):
         if input_channel in compile_context.channels:
           channel_pb.CopyFrom(compile_context.channels[input_channel])
+        elif isinstance(input_channel, tfx_channel.PipelineOutputChannel):
+          # Add pipeline context query
+          context_query = channel_pb.context_queries.add()
+          context_query.type.name = constants.PIPELINE_CONTEXT_TYPE_NAME
+          context_query.name.field_value.string_value = (
+              input_channel.pipeline.pipeline_name)
+          # Add node context query
+          node_context_query = channel_pb.context_queries.add()
+          node_context_query.type.name = constants.NODE_CONTEXT_TYPE_NAME
+          node_context_query.name.field_value.string_value = "{}.{}".format(
+              input_channel.pipeline.pipeline_name,
+              input_channel.wrapped.producer_component_id)
+
+          artifact_type = value.type._get_artifact_type()  # pylint: disable=protected-access
+          channel_pb.artifact_query.type.CopyFrom(artifact_type)
+          channel_pb.artifact_query.type.ClearField("properties")
         else:
           raise ValueError(
               f"Failed to find producer info for the input channel '{key}' "
