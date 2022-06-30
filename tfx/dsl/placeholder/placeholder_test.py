@@ -74,32 +74,9 @@ class PlaceholderTest(tf.test.TestCase):
         }
     """)
 
-  def testArtifactPropertyWithIndex(self):
+  def testArtifactProperty(self):
     self._assert_placeholder_pb_equal_and_deepcopyable(
-        ph.input('model')[11].property('blessed'), """
-        operator {
-          artifact_property_op {
-            expression {
-              operator {
-                index_op {
-                  expression {
-                    placeholder {
-                      type: INPUT_ARTIFACT
-                      key: "model"
-                    }
-                  }
-                  index: 11
-                }
-              }
-            }
-            key: "blessed"
-          }
-        }
-    """)
-
-  def testArtifactPropertyDefault0Index(self):
-    self._assert_placeholder_pb_equal_and_deepcopyable(
-        ph.input('model').property('blessed'), """
+        ph.input('model')[0].property('blessed'), """
         operator {
           artifact_property_op {
             expression {
@@ -120,33 +97,9 @@ class PlaceholderTest(tf.test.TestCase):
         }
     """)
 
-  def testArtifactCustomPropertyWithIndex(self):
+  def testArtifactCustomProperty(self):
     self._assert_placeholder_pb_equal_and_deepcopyable(
-        ph.input('model')[11].custom_property('blessed'), """
-        operator {
-          artifact_property_op {
-            expression {
-              operator {
-                index_op {
-                  expression {
-                    placeholder {
-                      type: INPUT_ARTIFACT
-                      key: "model"
-                    }
-                  }
-                  index: 11
-                }
-              }
-            }
-            key: "blessed"
-            is_custom_property: True
-          }
-        }
-    """)
-
-  def testArtifactCustomPropertyDefault0Index(self):
-    self._assert_placeholder_pb_equal_and_deepcopyable(
-        ph.input('model').custom_property('blessed'), """
+        ph.input('model')[0].custom_property('blessed'), """
         operator {
           artifact_property_op {
             expression {
@@ -245,7 +198,7 @@ class PlaceholderTest(tf.test.TestCase):
         ph.input('primitive').value['key'][0], """
         operator {
           index_op {
-            expression {
+            expression {        
               operator {
                 index_op {
                   expression {

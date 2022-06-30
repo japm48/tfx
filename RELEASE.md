@@ -12,6 +12,11 @@
 
 ## Bug Fixes and Other Changes
 
+*  Added `input_optional` parameter to `ChannelParameter`. This allows component
+   authors to declare that even if a channel is `optional`, if it is provided
+   during pipeline definition time, then it must have resolved inputs during
+   run time.
+
 ## Dependency Updates
 
 ## Documentation Updates
