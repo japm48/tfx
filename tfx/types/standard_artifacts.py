@@ -127,10 +127,6 @@ class ExampleStatistics(_TfxArtifact):
   }
 
 
-class ExamplesDiff(_TfxArtifact):
-  TYPE_NAME = 'ExamplesDiff'
-
-
 # TODO(b/158334890): deprecate ExternalArtifact.
 class ExternalArtifact(_TfxArtifact):
   TYPE_NAME = 'ExternalArtifact'
@@ -218,10 +214,7 @@ class Bytes(ValueArtifact):
 
 
 class String(ValueArtifact):
-  """String-typed artifact.
-
-  String value artifacts are encoded using UTF-8.
-  """
+  """String-typed artifact."""
   TYPE_NAME = 'String'
 
   # Note, currently we enforce unicode-encoded string.
@@ -253,10 +246,7 @@ class Boolean(ValueArtifact):
 
 
 class Integer(ValueArtifact):
-  """Integer-typed artifact.
-
-  Integer value artifacts are encoded as a decimal string.
-  """
+  """Integer-typed artifact."""
   TYPE_NAME = 'Integer'
 
   def encode(self, value: int) -> bytes:
@@ -270,12 +260,7 @@ class Integer(ValueArtifact):
 
 
 class Float(ValueArtifact):
-  """Float-typed artifact.
-
-  Float value artifacts are encoded using Python str() class. However,
-  Nan and Infinity are handled separately. See string constants in the
-  class.
-  """
+  """Float-typed artifact."""
   TYPE_NAME = 'Float'
 
   _POSITIVE_INFINITY = float('Inf')

@@ -432,12 +432,10 @@ class ArtifactPlaceholder(Placeholder):
       self._operators.append(_IndexOperator(0))
 
   def property(self, key: str):
-    self._try_inject_index_operator()
     self._operators.append(_PropertyOperator(key))
     return self
 
   def custom_property(self, key: str):
-    self._try_inject_index_operator()
     self._operators.append(_PropertyOperator(key, is_custom_property=True))
     return self
 

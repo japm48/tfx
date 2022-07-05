@@ -65,7 +65,7 @@ _register_strategy(span_range_strategy.SpanRangeStrategy)
 
 def testonly_register(cls: _OpTypes) -> _OpTypes:
   if issubclass(cls, resolver_op.ResolverOp):
-    _register_op(cls, name=cls.__name__)
+    _register_op(cls)
   else:
     _register_strategy(cls)
   return cls

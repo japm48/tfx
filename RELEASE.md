@@ -1,46 +1,17 @@
 # Current Version (Still in Development)
 
 ## Major Features and Improvements
-
-## Breaking Changes
-
-### For Pipeline Authors
-
-### For Component Authors
-
-## Deprecations
-
-## Bug Fixes and Other Changes
-
-## Dependency Updates
-
-## Documentation Updates
-
-# Version 1.9.0
-
-## Major Features and Improvements
-
 *   Added Json value artifact.
 
 ## Breaking Changes
 
-*   N/A
-
 ### For Pipeline Authors
-
-*   N/A
 
 ### For Component Authors
 
-*   N/A
-
 ## Deprecations
 
-*   N/A
-
 ## Bug Fixes and Other Changes
-
-*   N/A
 
 ## Dependency Updates
 
@@ -48,20 +19,9 @@
 | -- | -- | -- | -- |
 | `tensorflow` | `>=1.15.5,<2` or `~=2.9.0` | `>=1.15.5,<2` or `~=2.8.0` | |
 | `tensorflow-ranking` | `~=0.5.0` | `~=0.3.0` | Required for TF 2.9 |
-| `typing-extensions` | `>=3.10.0.2,<5` | N/A | For typing utilities |
-| `ml-metadata` | `~=1.9.0` | `~=1.8.0` | Synced release train |
-| `struct2tensor` | `~=0.40.0` | `~=0.39.0` | Synced release train |
-| `tensorflow-data-validation` | `~=1.9.0` | `~=1.8.0` | Synced release train |
-| `tensorflow-model-analysis` | `~=0.40.0` | `~=0.39.0` | Synced release train |
-| `tensorflow-serving-api` | `>=1.15,<3` or `~=2.9.0` | `>=1.15,<3` or `~=2.8.0` | |
-| `tensorflow-transform` | `~=1.9.0` | `~=1.8.0` | Synced release train |
-| `tfx-bsl` | `~=1.9.0` | `~=1.8.0` | Synced release train |
-
-
+| `typing-extensions` | `>=4.2.0,<5` | N/A | For typing utilities |
 
 ## Documentation Updates
-
-*   N/A
 
 # Version 1.8.0
 
@@ -105,8 +65,6 @@
   "unexpected keyword argument 'default_args'".
 * StatisticsGen will raise an error if unsupported StatsOptions (i.e.,
   generators or experimental_slice_functions) are passed.
-* Fixed a bug in the Artifact attribute setter that was causing the
-  corresponding getter not to return a value for properties of type JSON_VALUE.
 
 ## Dependency Updates
 
