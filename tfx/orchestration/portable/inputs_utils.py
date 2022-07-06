@@ -20,6 +20,7 @@ from tfx.orchestration import metadata
 from tfx.orchestration.portable import data_types
 from tfx.orchestration.portable.input_resolution import channel_resolver
 from tfx.orchestration.portable.input_resolution import exceptions
+from tfx.orchestration.portable.input_resolution import node_inputs_resolver
 from tfx.orchestration.portable.input_resolution import resolver_config_resolver
 from tfx.proto.orchestration import pipeline_pb2
 from tfx.utils import typing_utils
@@ -113,6 +114,7 @@ def _resolve_node_inputs_with_resolver_config(
     raise exceptions.FailedPreconditionError(
         'Invalid input resolution result; expected Sequence[ArtifactMultiMap] '
         f'type but got {resolved}.')
+  _check_sufficient(resolved, node_inputs)
   return resolved  # pytype: disable=bad-return-type
 
 
@@ -162,8 +164,7 @@ def resolve_input_artifacts(
     resolved = _resolve_node_inputs_with_resolver_config(
         metadata_handler, node_inputs)
   else:
-    resolved = _resolve_node_inputs(metadata_handler, node_inputs)
-  _check_sufficient(resolved, node_inputs)
+    resolved = node_inputs_resolver.resolve(metadata_handler.store, node_inputs)
   return Trigger(resolved) if resolved else Skip()
 
 
