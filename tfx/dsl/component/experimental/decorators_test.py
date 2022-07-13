@@ -14,7 +14,7 @@
 """Tests for tfx.dsl.components.base.decorators."""
 
 import os
-from typing import Optional
+from typing import Optional, Dict
 
 import apache_beam as beam
 import tensorflow as tf
@@ -148,18 +148,18 @@ def _verify_with_annotation(e: float, f: float, g: Optional[str],
 def _injector_2(
     examples: OutputArtifact[standard_artifacts.Examples]
 ) -> OutputDict(
-    a=int, b=float, c=str, d=bytes, e=str):
+    a=int, b=float, c=str, d=bytes, e=str, f=Dict[str, int]):
   fileio.makedirs(examples.uri)
-  return {'a': 1, 'b': 2.0, 'c': '3', 'd': b'4', 'e': 'passed'}
+  return {'a': 1, 'b': 2.0, 'c': '3', 'd': b'4', 'e': 'passed', 'f': {'foo': 1}}
 
 
 @component
 def _injector_3(
     examples: OutputArtifact[standard_artifacts.Examples]
 ) -> OutputDict(
-    a=int, b=float, c=str, d=bytes, e=str):
+    a=int, b=float, c=str, d=bytes, e=str, f=Dict[str, int]):
   fileio.makedirs(examples.uri)
-  return {'a': 1, 'b': 2.0, 'c': '3', 'd': b'4', 'e': None}
+  return {'a': 1, 'b': 2.0, 'c': '3', 'd': b'4', 'e': None, 'f': {'foo': 1}}
 
 
 @component
@@ -177,7 +177,9 @@ def _optionalarg_component(
     g: Parameter[float] = 1000.0,
     h: Parameter[str] = '2000',
     optional_examples_1: InputArtifact[standard_artifacts.Examples] = None,
-    optional_examples_2: InputArtifact[standard_artifacts.Examples] = None):
+    optional_examples_2: InputArtifact[standard_artifacts.Examples] = None,
+    json_input_1: Dict[str, int] = None,
+    json_input_2: Dict[str, int] = None):
   # Test non-optional parameters.
   assert foo == 9
   assert bar == 'secret'
@@ -201,6 +203,10 @@ def _optionalarg_component(
   assert optional_examples_1 and optional_examples_1.uri
   # Test non-passed optional input artifact.
   assert optional_examples_2 is None
+  # Test passed optional json input artifact.
+  assert json_input_1 == {'foo': 1}
+  # Test non-passed optional json input artifact.
+  assert json_input_2 is None
 
 
 @component(use_beam=True)
@@ -212,6 +218,7 @@ def _beam_component_with_artifact_inputs(
     d: bytes,
     examples: InputArtifact[standard_artifacts.Examples],
     processed_examples: OutputArtifact[standard_artifacts.Examples],
+    json_input: Dict[str, int],
     e1: str = 'default',
     e2: Optional[str] = 'default',
     f: bytes = b'default',
@@ -227,6 +234,7 @@ def _beam_component_with_artifact_inputs(
   assert b == 2.0
   assert c == '3'
   assert d == b'4'
+  assert json_input == {'foo': 1}
   # Test passed optional arguments (with and without the `Optional` typehint
   # specifier).
   assert e1 == 'passed'
@@ -389,7 +397,7 @@ class ComponentDecoratorTest(tf.test.TestCase):
         RuntimeError, r'AssertionError: \(220.0, 32.0, \'OK\', None\)'):
       beam_dag_runner.BeamDagRunner().run(test_pipeline)
 
-  def testBeamExecutionOptionalInputsAndParameters(self):
+  def testOptionalInputsAndParameters(self):
     """Test execution with optional inputs and parameters."""
     instance_1 = _injector_2()  # pylint: disable=no-value-for-parameter
     self.assertLen(instance_1.outputs['examples'].get(), 1)
@@ -404,7 +412,8 @@ class ComponentDecoratorTest(tf.test.TestCase):
         e1=instance_1.outputs['e'],
         e2=instance_1.outputs['e'],
         g=999.0,
-        optional_examples_1=instance_1.outputs['examples'])
+        optional_examples_1=instance_1.outputs['examples'],
+        json_input_1=instance_1.outputs['f'])
 
     metadata_config = metadata.sqlite_metadata_connection_config(
         self._metadata_path)
@@ -423,6 +432,7 @@ class ComponentDecoratorTest(tf.test.TestCase):
     instance_2 = _beam_component_with_artifact_inputs(  # pylint: disable=assignment-from-no-return, no-value-for-parameter
         foo=9,
         examples=instance_1.outputs['examples'],
+        json_input=instance_1.outputs['f'],
         a=instance_1.outputs['a'],
         b=instance_1.outputs['b'],
         c=instance_1.outputs['c'],
@@ -456,7 +466,8 @@ class ComponentDecoratorTest(tf.test.TestCase):
         e1=instance_1.outputs['e'],
         e2=instance_1.outputs['e'],
         g=999.0,
-        optional_examples_1=instance_1.outputs['examples'])
+        optional_examples_1=instance_1.outputs['examples'],
+        json_input_1=instance_1.outputs['f'])
 
     metadata_config = metadata.sqlite_metadata_connection_config(
         self._metadata_path)

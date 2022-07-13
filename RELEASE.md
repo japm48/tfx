@@ -21,6 +21,7 @@
 ## Major Features and Improvements
 
 *   Added Json value artifact.
+*   Allow JSON value artifacts to be passed in and returned by components as JsonValue artifacts.
 
 ## Breaking Changes
 

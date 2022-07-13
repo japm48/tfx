@@ -21,6 +21,7 @@ Internal use only. No backwards compatibility guarantees.
 
 import enum
 import inspect
+import sys
 import types
 from typing import Any, Dict, Optional, Tuple, Type, Union
 
@@ -52,11 +53,55 @@ _PRIMITIVE_TO_ARTIFACT = {
     bool: standard_artifacts.Boolean,
 }
 
-
 # Map from `Optional[T]` to `T` for primitive types. This map is a simple way
 # to extract the value of `T` from its optional typehint, since the internal
 # fields of the typehint vary depending on the Python version.
 _OPTIONAL_PRIMITIVE_MAP = dict((Optional[t], t) for t in _PRIMITIVE_TO_ARTIFACT)
+
+
+def _is_jsonable(typehint: Any,
+                 func: Optional[types.FunctionType] = None) -> bool:
+  """Check if a typehint is jsonable."""
+  # Currently, jsonable means a type conforms with T, where T is defined as
+  # `X = Union['T', int, float, str, bytes, bool, NoneType]`,
+  # `T = Union[List['X'], Dict[str, 'X']]`, if also can be Optional
+  seen = set([])
+  globaln = None
+
+  def check(typehint: Any, not_primitive: bool = True) -> bool:
+    nonlocal globaln
+    # Handle ForwardRef
+    if typehint.__class__.__name__ == 'ForwardRef':
+      typename = typehint.__forward_arg__
+      if typename in seen:
+        return True
+      module_name = getattr(func, '__module__', None)
+      if globaln is None:
+        globaln = getattr(sys.modules.get(module_name, None), '__dict__', {})
+      seen.add(typename)
+      return check(
+          typehint=globaln.get(typename, None), not_primitive=not_primitive)
+    origin = getattr(typehint, '__origin__', typehint)
+    args = getattr(typehint, '__args__', None)
+    if origin is dict or origin is list or origin is Union:
+      # starting from Python 3.9 Dict won't have default args (~KT, ~VT)
+      # and List won't have default args (~T)
+      if not args:
+        return False
+      if origin is dict and args[0] != str:
+        return False
+      # Handle optional
+      if not_primitive and origin is Union:
+        return not any([
+            arg in _PRIMITIVE_TO_ARTIFACT or
+            not check(typehint=arg, not_primitive=False) for arg in args
+        ])
+      return all([check(typehint=arg, not_primitive=False) for arg in args])
+    else:
+      return not not_primitive and (origin in _PRIMITIVE_TO_ARTIFACT or
+                                    origin is type(None))
+
+  return check(typehint)
 
 
 def _validate_signature(
@@ -105,13 +150,10 @@ def _parse_signature(
     func: types.FunctionType,
     argspec: inspect.FullArgSpec,  # pytype: disable=module-attr
     typehints: Dict[str, Any]
-) -> Tuple[
-    Dict[str, Type[artifact.Artifact]],
-    Dict[str, Type[artifact.Artifact]],
-    Dict[str, Type[Union[int, float, str, bytes, _BeamPipeline]]],
-    Dict[str, Any],
-    Dict[str, ArgFormats],
-    Dict[str, bool]]:
+) -> Tuple[Dict[str, Type[artifact.Artifact]], Dict[
+    str, Type[artifact.Artifact]], Dict[str, Type[Union[
+        int, float, str, bytes, _BeamPipeline]]], Dict[str, Any], Dict[
+            str, ArgFormats], Dict[str, bool]]:
   """Parses signature of a typehint-annotated component executor function.
 
   Args:
@@ -197,6 +239,9 @@ def _parse_signature(
                'instead)') % (arg, func, arg_typehint, arg_defaults[arg]))
       arg_formats[arg] = ArgFormats.ARTIFACT_VALUE
       inputs[arg] = _PRIMITIVE_TO_ARTIFACT[arg_typehint]
+    elif _is_jsonable(arg_typehint, func):
+      arg_formats[arg] = ArgFormats.ARTIFACT_VALUE
+      inputs[arg] = standard_artifacts.JsonValue
     elif (inspect.isclass(arg_typehint) and
           issubclass(arg_typehint, artifact.Artifact)):
       raise ValueError((
@@ -219,6 +264,12 @@ def _parse_signature(
       elif arg_typehint in _PRIMITIVE_TO_ARTIFACT:
         outputs[arg] = _PRIMITIVE_TO_ARTIFACT[arg_typehint]
         returned_outputs[arg] = False
+      elif _is_jsonable(arg_typehint, func):
+        outputs[arg] = standard_artifacts.JsonValue
+        # check if Optional
+        origin = getattr(arg_typehint, '__origin__', None)
+        args = getattr(arg_typehint, '__args__', None)
+        returned_outputs[arg] = origin is Union and type(None) in args
       else:
         raise ValueError(
             ('Unknown type hint annotation %r for returned output %r on '
@@ -230,13 +281,10 @@ def _parse_signature(
 
 def parse_typehint_component_function(
     func: types.FunctionType
-) -> Tuple[
-    Dict[str, Type[artifact.Artifact]],
-    Dict[str, Type[artifact.Artifact]],
-    Dict[str, Type[Union[int, float, str, bytes]]],
-    Dict[str, Any],
-    Dict[str, ArgFormats],
-    Dict[str, bool]]:
+) -> Tuple[Dict[str, Type[artifact.Artifact]], Dict[
+    str, Type[artifact.Artifact]], Dict[str, Type[Union[
+        int, float, str, bytes]]], Dict[str, Any], Dict[str, ArgFormats], Dict[
+            str, bool]]:
   """Parses the given component executor function.
 
   This method parses a typehinted-annotated Python function that is intended to

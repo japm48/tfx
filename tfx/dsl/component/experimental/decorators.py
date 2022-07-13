@@ -267,11 +267,11 @@ def component(
     construction time, will be passed for this argument. These parameters will
     be recorded in ML Metadata as part of the component's execution record. Can
     be an optional argument.
-  * `int`, `float`, `str`, `bytes`: indicates that a primitive type value will
-    be passed for this argument. This value is tracked as an `Integer`, `Float`
-    `String` or `Bytes` artifact (see `tfx.types.standard_artifacts`) whose
-    value is read and passed into the given Python component function. Can be
-    an optional argument.
+  * `int`, `float`, `str`, `bytes`, `bool`, `Dict`, `List`: indicates that a
+    primitive type value will be passed for this argument. This value is tracked
+    as an `Integer`, `Float`, `String`, `Bytes`, `Boolean` or `JsonValue`
+    artifact (see `tfx.types.standard_artifacts`) whose value is read and passed
+    into the given Python component function. Can be an optional argument.
   * `InputArtifact[ArtifactType]`: indicates that an input artifact object of
     type `ArtifactType` (deriving from `tfx.types.Artifact`) will be passed for
     this argument. This artifact is intended to be consumed as an input by this
@@ -286,10 +286,10 @@ def component(
   The return value typehint should be either empty or `None`, in the case of a
   component function that has no return values, or an instance of
   `OutputDict(key_1=type_1, ...)`, where each key maps to a given type (each
-  type is a primitive value type, i.e. `int`, `float`, `str` or `bytes`; or
-  `Optional[T]`, where T is a primitive type value, in which case `None` can be
-  returned), to indicate that the return value is a dictionary with specified
-  keys and value types.
+  type is a primitive value type, i.e. `int`, `float`, `str`, `bytes`, `bool`
+  `Dict` or  `List`; or `Optional[T]`, where T is a primitive type value, in
+  which case `None` can be returned), to indicate that the return value is a
+  dictionary with specified keys and value types.
 
   Note that output artifacts should not be included in the return value
   typehint; they should be included as `OutputArtifact` annotations in the
