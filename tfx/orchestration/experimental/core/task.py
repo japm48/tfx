@@ -23,6 +23,7 @@ from typing import Dict, Hashable, List, Optional, Type, TypeVar
 
 import attr
 from tfx import types
+from tfx.orchestration import proto_views
 from tfx.proto.orchestration import pipeline_pb2
 from tfx.utils import status as status_lib
 
@@ -59,7 +60,7 @@ class NodeUid:
 
   @classmethod
   def from_pipeline_node(cls: Type['NodeUid'], pipeline: pipeline_pb2.Pipeline,
-                         node: pipeline_pb2.PipelineNode) -> 'NodeUid':
+                         node: proto_views.NodeProtoView) -> 'NodeUid':
     return cls(
         pipeline_uid=PipelineUid.from_pipeline(pipeline),
         node_id=node.node_info.id)
@@ -139,10 +140,11 @@ class ExecNodeTask(Task):
   def task_id(self) -> TaskId:
     return _exec_node_task_id(self.task_type_id(), self.node_uid)
 
-  def get_pipeline_node(self) -> pipeline_pb2.PipelineNode:
-    for node in self.pipeline.nodes:
-      if node.pipeline_node.node_info.id == self.node_uid.node_id:
-        return node.pipeline_node
+  def get_pipeline_node(self) -> proto_views.NodeProtoView:
+    for pipeline_or_node in self.pipeline.nodes:
+      view = proto_views.get_view(pipeline_or_node)
+      if view.node_info.id == self.node_uid.node_id:
+        return view
     raise ValueError(
         f'Node not found in pipeline IR; node uid: {self.node_uid}')
 
@@ -193,7 +195,7 @@ class UpdateNodeStateTask(Task):
 
 
 def exec_node_task_id_from_pipeline_node(
-    pipeline: pipeline_pb2.Pipeline, node: pipeline_pb2.PipelineNode) -> TaskId:
+    pipeline: pipeline_pb2.Pipeline, node: proto_views.NodeProtoView) -> TaskId:
   """Returns task id of an `ExecNodeTask` from pipeline and node."""
   return _exec_node_task_id(ExecNodeTask.task_type_id(),
                             NodeUid.from_pipeline_node(pipeline, node))

@@ -22,7 +22,7 @@ import "tfx/proto/orchestration/pipeline.proto";
 
 // All the information needed for a TFX component execution.
 // TODO(b/172391062): Make this `ExecutionInvocation` for broader usages.
-// Next ID: 15
+// Next ID: 16
 message ExecutionInvocation {
   reserved 1, 2;
 
@@ -54,8 +54,14 @@ message ExecutionInvocation {
   // Pipeline info proto from the IR specification.
   tfx.orchestration.PipelineInfo pipeline_info = 8;
 
-  // Pipeline node proto from the IR specification.
-  tfx.orchestration.PipelineNode pipeline_node = 9;
+  oneof node {
+    // Pipeline node proto from the IR specification.
+    tfx.orchestration.PipelineNode pipeline_node = 9;
+
+    // Pipeline proto from the IR specification that represents a subpipeline
+    // within the given pipeline.
+    tfx.orchestration.Pipeline sub_pipeline = 15;
+  }
 
   // The MLMD `Execution` ID.
   int64 execution_id = 11;

@@ -19,6 +19,7 @@ from typing import Callable, Dict, List, Mapping, Optional, Set
 from absl import logging
 from tfx.orchestration import data_types_utils
 from tfx.orchestration import metadata
+from tfx.orchestration import proto_views
 from tfx.orchestration.experimental.core import constants
 from tfx.orchestration.experimental.core import mlmd_state
 from tfx.orchestration.experimental.core import pipeline_state as pstate
@@ -31,6 +32,7 @@ from tfx.orchestration.portable.mlmd import execution_lib
 from tfx.proto.orchestration import pipeline_pb2
 from tfx.utils import status as status_lib
 from tfx.utils import topsort
+
 from ml_metadata.proto import metadata_store_pb2
 
 
@@ -99,12 +101,6 @@ class _Generator:
           'SyncPipelineTaskGenerator should be instantiated with a pipeline '
           'proto having execution_mode `SYNC`, not `{}`'.format(
               pipeline.execution_mode))
-    for node in pipeline.nodes:
-      which_node = node.WhichOneof('node')
-      if which_node != 'pipeline_node':
-        raise ValueError(
-            'All sync pipeline nodes should be of type `PipelineNode`; found: '
-            '`{}`'.format(which_node))
     self._pipeline_state = pipeline_state
     with self._pipeline_state:
       self._node_states_dict = self._pipeline_state.get_node_states_dict()
@@ -188,7 +184,7 @@ class _Generator:
     return result
 
   def _generate_tasks_for_node(
-      self, node: pipeline_pb2.PipelineNode) -> List[task_lib.Task]:
+      self, node: proto_views.NodeProtoView) -> List[task_lib.Task]:
     """Generates list of tasks for the given node."""
     node_uid = task_lib.NodeUid.from_pipeline_node(self._pipeline, node)
     node_id = node.node_info.id
@@ -304,7 +300,7 @@ class _Generator:
 
   def _resolve_inputs_and_generate_tasks_for_node(
       self,
-      node: pipeline_pb2.PipelineNode,
+      node: proto_views.NodeProtoView,
   ) -> List[task_lib.Task]:
     """Generates tasks for a node by freshly resolving inputs."""
     result = []
@@ -397,7 +393,7 @@ class _Generator:
           self._pipeline_state, node_id)
     return None
 
-  def _upstream_nodes_successful(self, node: pipeline_pb2.PipelineNode,
+  def _upstream_nodes_successful(self, node: proto_views.NodeProtoView,
                                  successful_node_ids: Set[str]) -> bool:
     """Returns `True` if all the upstream nodes have been successfully executed."""
     return set(node.upstream_nodes) <= successful_node_ids
@@ -423,11 +419,11 @@ def _skipped_node_ids(pipeline: pipeline_pb2.Pipeline) -> Set[str]:
 
 
 def _topsorted_layers(
-    pipeline: pipeline_pb2.Pipeline) -> List[List[pipeline_pb2.PipelineNode]]:
+    pipeline: pipeline_pb2.Pipeline) -> List[List[proto_views.NodeProtoView]]:
   """Returns pipeline nodes in topologically sorted layers."""
   node_by_id = _node_by_id(pipeline)
   return topsort.topsorted_layers(
-      [node.pipeline_node for node in pipeline.nodes],
+      [proto_views.get_view(node) for node in pipeline.nodes],
       get_node_id_fn=lambda node: node.node_info.id,
       get_parent_nodes=(
           lambda node: [node_by_id[n] for n in node.upstream_nodes]),
@@ -435,7 +431,7 @@ def _topsorted_layers(
           lambda node: [node_by_id[n] for n in node.downstream_nodes]))
 
 
-def _terminal_node_ids(layers: List[List[pipeline_pb2.PipelineNode]],
+def _terminal_node_ids(layers: List[List[proto_views.NodeProtoView]],
                        skipped_node_ids: Set[str]) -> Set[str]:
   """Returns nodes across all layers that have no downstream nodes to run."""
   terminal_node_ids: Set[str] = set()
@@ -452,14 +448,15 @@ def _terminal_node_ids(layers: List[List[pipeline_pb2.PipelineNode]],
 
 
 def _node_by_id(
-    pipeline: pipeline_pb2.Pipeline) -> Dict[str, pipeline_pb2.PipelineNode]:
-  return {
-      node.pipeline_node.node_info.id: node.pipeline_node
-      for node in pipeline.nodes
-  }
+    pipeline: pipeline_pb2.Pipeline) -> Dict[str, proto_views.NodeProtoView]:
+  result = {}
+  for node in pipeline.nodes:
+    view = proto_views.get_view(node)
+    result[view.node_info.id] = view
+  return result
 
 
-def _descendants(node_by_id: Mapping[str, pipeline_pb2.PipelineNode],
+def _descendants(node_by_id: Mapping[str, proto_views.NodeProtoView],
                  node_id: str) -> Set[str]:
   """Returns node_ids of all descendants of the given node_id."""
   queue = collections.deque()
